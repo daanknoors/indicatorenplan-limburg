@@ -5,15 +5,16 @@ import pandas as pd
 from indicatorenplan_limburg.configs.paths import get_path_data
 
 
-def load_data_vrl(year: int, usecols: None | list[str] = None) -> pd.DataFrame:
+def load_data_vrl(year: int, usecols: int | list[str] | None = None, n_rows: int | None = None) -> pd.DataFrame:
     """Load Data Vestigingsregister Limburg (VRL) for a given year
 
     Args:
         year (int): year to load
-        usecols (None, optional): columns to load. Defaults to None.
+        usecols (int, list, optional): columns to load. Defaults to None.
             If None, all columns are loaded.
+        n_rows (int | None, optional): number of rows to load. Defaults to None.
     """
     # Load the data
     path_data = get_path_data(name='vrl', state='raw') / f"vrl{year}.xlsx"
-    df = pd.read_excel(path_data, usecols=usecols)
+    df = pd.read_excel(path_data, usecols=usecols, nrows=n_rows)
     return df
