@@ -4,6 +4,7 @@ Vestigingen per grootteklasse per sector
 """
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from collections.abc import Sequence
 
@@ -11,7 +12,7 @@ from indicatorenplan_limburg.configs.paths import get_path_data
 from indicatorenplan_limburg.data.load import load_data_vrl
 
 # Constants
-RANGES_GROOTTEKLASSE = ('0-9', '10-49', '50-99', '100-249', '250-9999')
+RANGES_GROOTTEKLASSE = ('0_9', '10_49', '50_99', '100_249', '250_9999')
 OUTPUT_FILENAME = "MO_7i Vestigingen per grootteklasse per sector.xlsx"
 
 # Mapping of SBI names to shorter name categories, easier to display
@@ -63,7 +64,7 @@ def categorize_company_size(employee_counts: pd.Series, ranges: tuple):
         _parsed_ranges = []
         for r in _str_ranges:
             # split the range into lower and upper bounds
-            lb, ub = r.split('-')
+            lb, ub = r.split('_')
             # convert to integers
             lb = int(lb)
             ub = int(ub)
@@ -124,13 +125,13 @@ def transform_data_vrl(df: pd.DataFrame) -> pd.DataFrame:
     year = pd.to_datetime(df['PEILDATUM']).dt.year
 
     # add grootteklassen and convert to category for easier ordering
-    df['dim_grootte'] = categorize_company_size(employee_counts=df['WP_FPU_TOTAAL'], ranges=RANGES_GROOTTEKLASSE)
+    df['dim_grootte_1'] = categorize_company_size(employee_counts=df['WP_FPU_TOTAAL'], ranges=RANGES_GROOTTEKLASSE)
     
     # transform names SBI
-    df['dim_sbi'] = df['SBI_1_NAAM'].replace(SBI_DICT)
+    df['dim_sbi_1'] = df['SBI_1_NAAM'].replace(SBI_DICT)
 
     # count group by sbi naam and grootteklassen
-    df_grouped = df.groupby(by=['dim_sbi', 'dim_grootte'], observed=False).size().reset_index(name='mo-7i')
+    df_grouped = df.groupby(by=['dim_sbi_1', 'dim_grootte_1'], observed=False).size().reset_index(name='mo-7i')
 
     # add remaining columns
     df_grouped['period'] = year
@@ -138,7 +139,7 @@ def transform_data_vrl(df: pd.DataFrame) -> pd.DataFrame:
     df_grouped['geoitem'] = 'pv31'
 
     # subset and order columns
-    df_grouped = df_grouped[['period', 'geolevel', 'geoitem', 'dim_sbi', 'dim_grootte', 'mo-7i']]
+    df_grouped = df_grouped[['period', 'geolevel', 'geoitem', 'dim_sbi_1', 'dim_grootte_1', 'mo-7i']]
     return df_grouped
 
 
@@ -150,6 +151,7 @@ def get_metadata() -> dict:
             'Indicator code': ['mo_7i'],
             'Name': ['MO_7i Vestigingen per grootteklasse per sector'],
             'Data type': ['Numeric'],
+            'Keywords': ['Indicatorenplan'],
             'Period type': ['Year'],
             'Formula': [np.nan],
             'Aggregation indicator': [np.nan],
@@ -176,7 +178,7 @@ def get_metadata() -> dict:
         """Get the 'grootteklasse_dim' metadata for the indicator"""
         df_grooteklasse = pd.DataFrame({
             'itemcode': RANGES_GROOTTEKLASSE,
-            'Name': RANGES_GROOTTEKLASSE
+            'Name': [x.replace('_', '-') for x in RANGES_GROOTTEKLASSE]
         })
         return df_grooteklasse
 
@@ -197,17 +199,17 @@ def get_metadata() -> dict:
     return metadata_dict
 
 
-def save_data(df_data: pd.DataFrame, metadata_dict: dict, path_data=None) -> None:
+def save_data(df_data: pd.DataFrame, metadata_dict: dict, save_path=None) -> None:
     """Save the data to a csv file
 
     Args:
         df_data (pd.DataFrame): dataframe to save
         metadata_dict (dict): metadata dictionary
-        path_data (Path, optional): path to save the data. Defaults to None.
+        save_path (Path, optional): path to save the data. Defaults to None.
     """
-    if not path_data:
-        path_data = get_path_data(name='vrl', state='processed')
-    path_file = path_data / OUTPUT_FILENAME
+    if not save_path:
+        save_path = get_path_data(name='vrl', state='processed')
+    path_file = save_path / OUTPUT_FILENAME
 
     # save data to excel with multiple sheets
     with pd.ExcelWriter(path_file, engine='openpyxl') as writer:
@@ -220,11 +222,12 @@ def save_data(df_data: pd.DataFrame, metadata_dict: dict, path_data=None) -> Non
     print(f"Data saved to {path_file}")
 
 
-def main(years: Sequence[int] = (2023, 2024), n_rows: int | None = None) -> None:
+def main(years: Sequence[int] = (2023, 2024), n_rows: int | None = None, save_path: str | Path | None = None) -> None:
     """Main function to load, transform and save the data
     Args:
         years (Sequence[int], optional): years to load. Defaults to (2023, 2024).
         n_rows (int | None, optional): number of rows to load. Mainly for testing. Defaults to None.
+        save_path (str | Path | None, optional): path to save the data. Defaults to None.
 
     Returns:
         None
@@ -242,13 +245,14 @@ def main(years: Sequence[int] = (2023, 2024), n_rows: int | None = None) -> None
     df_data = concat_data(list_df)
 
     # sort the data
-    df_data = df_data.sort_values(by=['period', 'dim_sbi', 'dim_grootte'])
+    df_data = df_data.sort_values(by=['period', 'dim_sbi_1', 'dim_grootte_1'])
 
     # get metadata
     metadata_dict = get_metadata()
 
     # save the data
-    save_data(df_data, metadata_dict)
+    save_data(df_data, metadata_dict, save_path=save_path)
+
 
 if __name__ == "__main__":
     main()

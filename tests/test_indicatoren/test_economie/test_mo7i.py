@@ -3,17 +3,18 @@ import numpy as np
 import pandas as pd
 
 from indicatorenplan_limburg.indicatoren.economie import mo7i
+from indicatorenplan_limburg.configs import paths
 
 
 def test_categorize_company_size():
     """Test the conversion of categories."""
     # define the ranges
-    ranges = ('0-9', '10-49', '50-99', '100-249', '250-9999')
+    ranges = ('0_9', '10_49', '50_99', '100_249', '250_9999')
 
     # test with different employee counts
     df = pd.DataFrame({
-        'employee_count': [0, 5, 25, 75, 150, 300, 1000, 10000, -1],
-        'expected': ['0-9', '0-9', '10-49', '50-99', '100-249', '250-9999', '250-9999', np.nan, np.nan]
+        'employee_count': [0, 5, 25, 75, 150, 300, 1000, 9999],
+        'expected': ['0_9', '0_9', '10_49', '50_99', '100_249', '250_9999', '250_9999', '250_9999']
     })
 
     # convert to categories
@@ -27,20 +28,32 @@ def test_categorize_company_size():
         else:
             assert row['dim_grootte'] == row['expected'], f"Expected {row['expected']} but got {row['dim_grootte']} for employee count {row['employee_count']}"
 
-def test_mo7i_main(years=(2023, 2024), n_rows=100):
+    # check assertion error
+    with pytest.raises(AssertionError):
+        # test case outside the defined ranges
+        df_outside = pd.DataFrame({
+            'employee_count': [-1, 10000],
+            'expected': [np.nan, np.nan]
+        })
+        mo7i.categorize_company_size(df_outside['employee_count'], ranges=ranges)
+
+
+def test_mo7i_main(years=(2023, 2024), n_rows=100, state='test'):
     """Test the main function of the mo7i module."""
     # run the main function
-    mo7i.main(years=years, n_rows=n_rows)
+    save_path = paths.get_path_data(name='vrl', state=state)
+
+    mo7i.main(years=years, n_rows=n_rows, save_path=save_path)
 
     print("Test passed: mo7i.main() with years:", years, "and n_rows:", n_rows)
 
 
-def test_mo7i_output():
+def test_mo7i_output(state='test'):
     """Test the output of the mo7i module."""
 
     # load output
-    path_data = mo7i.get_path_data(name='vrl', state='processed')
-    path_file = path_data / mo7i.OUTPUT_FILENAME
+    save_path = mo7i.get_path_data(name='vrl', state=state)
+    path_file = save_path / mo7i.OUTPUT_FILENAME
 
     # E   UnicodeDecodeError: 'utf-8' codec can't decode byte 0xa6 in position 10: invalid start byte
     df = pd.read_excel(path_file, engine='openpyxl')
