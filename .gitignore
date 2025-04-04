@@ -178,3 +178,6 @@ experimental/
 
 # mac
 .DS_Store
+
+# pycharm
+.idea/
