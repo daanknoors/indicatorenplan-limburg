@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from indicatorenplan_limburg.indicatoren.economie import mo7i
+from indicatorenplan_limburg.indicatoren.toekomstbestendige_economie import mo_7i
 from indicatorenplan_limburg.configs import paths
 
 
@@ -18,7 +18,7 @@ def test_categorize_company_size():
     })
 
     # convert to categories
-    df['dim_grootte'] = mo7i.categorize_company_size(df['employee_count'], ranges=ranges)
+    df['dim_grootte'] = mo_7i.categorize_company_size(df['employee_count'], ranges=ranges)
 
     # check if the conversion is correct
     for i, row in df.iterrows():
@@ -35,25 +35,25 @@ def test_categorize_company_size():
             'employee_count': [-1, 10000],
             'expected': [np.nan, np.nan]
         })
-        mo7i.categorize_company_size(df_outside['employee_count'], ranges=ranges)
+        mo_7i.categorize_company_size(df_outside['employee_count'], ranges=ranges)
 
 
-def test_mo7i_main(years=(2023, 2024), n_rows=100, state='test'):
-    """Test the main function of the mo7i module."""
+def test_mo_7i_main(years=(2023, 2024), n_rows=100, state='test'):
+    """Test the main function of the mo_7i module."""
     # run the main function
     save_path = paths.get_path_data(name='vrl', state=state)
 
-    mo7i.main(years=years, n_rows=n_rows, save_path=save_path)
+    mo_7i.main(years=years, n_rows=n_rows, save_path=save_path)
 
-    print("Test passed: mo7i.main() with years:", years, "and n_rows:", n_rows)
+    print("Test passed: mo_7i.main() with years:", years, "and n_rows:", n_rows)
 
 
-def test_mo7i_output(state='test'):
-    """Test the output of the mo7i module."""
+def test_mo_7i_output(state='test'):
+    """Test the output of the mo_7i module."""
 
     # load output
-    save_path = mo7i.get_path_data(name='vrl', state=state)
-    path_file = save_path / mo7i.OUTPUT_FILENAME
+    save_path = mo_7i.get_path_data(name='vrl', state=state)
+    path_file = save_path / mo_7i.OUTPUT_FILENAME
 
     # E   UnicodeDecodeError: 'utf-8' codec can't decode byte 0xa6 in position 10: invalid start byte
     df = pd.read_excel(path_file, engine='openpyxl')
