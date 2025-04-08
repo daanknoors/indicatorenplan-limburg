@@ -5,6 +5,22 @@ from pathlib import Path
 
 from indicatorenplan_limburg.configs import paths
 
+def summarize_dataset(df: pd.DataFrame, n_rows: int, sheet_name=None) -> None:
+    """Print summary of dataframe."""
+    with pd.option_context('display.max_rows', 500, 'display.max_columns', 200):
+        if sheet_name:
+            print(f"\nSummary of sheet '{sheet_name}':")
+        print(f"First {n_rows} rows:")
+        print(df.head(n_rows))
+        print("\nShape:")
+        print(df.shape)
+        print("\nColumns:")
+        print(df.columns.tolist())
+        print("\nDtypes:")
+        print(df.dtypes)
+
+
+
 
 def show_summary_data_in_dir(directory: Path | str, n_rows: int = 5) -> None:
     """Show a summary of dataframes in a directory, including first rows, shape, columns, and dtypes.
@@ -15,25 +31,12 @@ def show_summary_data_in_dir(directory: Path | str, n_rows: int = 5) -> None:
         n_rows (int): Number of rows to show in the summary.
     """
 
-    def _summarize(df: pd.DataFrame, n_rows: int, sheet_name=None) -> None:
-        """Print summary of dataframe."""
-        if sheet_name:
-            print(f"\nSummary of sheet {sheet_name}:")
-        print(f"First {n_rows} rows:")
-        print(df.head(n_rows))
-        print("\nShape:")
-        print(df.shape)
-        print("\nColumns:")
-        print(df.columns.tolist())
-        print("\nDtypes:")
-        print(df.dtypes)
-
-        # border ===
-        print(f"{'=' * 40}")
 
     if isinstance(directory, str):
         directory = Path(directory)
 
+
+    directory = directory.expanduser()
     if not directory.exists():
         print(f"Directory {directory} does not exist.")
         return
@@ -49,22 +52,29 @@ def show_summary_data_in_dir(directory: Path | str, n_rows: int = 5) -> None:
         print(f"- {file.name}")
     print(f"{'=' * 40}")
 
+    # only process files with .csv, .xlsx, or .xls extensions
+    supported_files = [file for file in files if file.suffix in ['.csv', '.xlsx', '.xls']]
+    if not files:
+        print(f"No supported files found in {directory}.")
+        return
+    else:
+        print(f"Processing {len(supported_files)} supported files.\n")
+
     # Read each file and show summary
-    for file in files:
+    for file in supported_files:
         print(f"Processing file: {file.name}")
         if file.suffix == '.csv':
             df = pd.read_csv(file)
-            _summarize(df, n_rows)
+            summarize_dataset(df, n_rows)
         elif (file.suffix == '.xlsx') or (file.suffix == '.xls'):
             # load all sheets in file
             engine = 'openpyxl' if file.suffix == '.xlsx' else 'xlrd'
             xls = pd.ExcelFile(file, engine=engine)
             for sheet_name in xls.sheet_names:
                 df = pd.read_excel(file, sheet_name=sheet_name)
-                _summarize(df, n_rows)
+                summarize_dataset(df, n_rows, sheet_name=sheet_name)
         else:
-            print(f"Warning: {file.name} is not a csv or excel file. Skipping.")
             continue
-
+        print(f"{'=' * 40}")
         del df
 
