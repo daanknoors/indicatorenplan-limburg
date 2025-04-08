@@ -14,7 +14,7 @@ def load_data_vrl(year: int, usecols: int | list[str] | None = None, n_rows: int
             If None, all columns are loaded.
         n_rows (int | None, optional): number of rows to load. Defaults to None.
     """
-    # Load the data
-    path_data = get_path_data(name='vrl', state='raw') / f"vrl{year}.xlsx"
+    # Load the processing
+    path_data = get_path_data(name='vrl', subfolder='raw') / f"vrl{year}.xlsx"
     df = pd.read_excel(path_data, usecols=usecols, nrows=n_rows)
     return df

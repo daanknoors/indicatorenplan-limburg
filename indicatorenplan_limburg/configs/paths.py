@@ -3,18 +3,16 @@ from pathlib import Path
 # Data paths
 PATH_DATA_DIR = Path('~/data')
 
-PATH_DATA_SETS = {
-    'vrl': PATH_DATA_DIR / 'vrl',
-}
 
-
-def get_path_data(name: str, state: str = 'raw') -> Path:
-    """Get the path to a specific data set.
+def get_path_data(name: str, subfolder: str | None = None) -> Path:
+    """Get the path to a specific processing set.
     
     Args:
-        name (str): The name of the data set.
-        state (str): The state of the data set. Default is 'raw'.
+        name (str): The name of the processing set.
+        subfolder (str): The subfolder of the processing set. Default is None.
     """
-    if name not in PATH_DATA_SETS:
-        raise ValueError(f"Data set '{name}' not found.\nAvailable: {list(PATH_DATA_SETS.keys())}")
-    return PATH_DATA_SETS[name] / state
+    path_data = PATH_DATA_DIR / name
+    if not subfolder:
+        return path_data
+
+    return path_data / subfolder

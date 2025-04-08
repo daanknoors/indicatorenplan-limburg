@@ -41,7 +41,7 @@ def test_categorize_company_size():
 def test_mo_7i_main(years=(2023, 2024), n_rows=100, state='test'):
     """Test the main function of the mo_7i module."""
     # run the main function
-    save_path = paths.get_path_data(name='vrl', state=state)
+    save_path = paths.get_path_data(name='vrl', subfolder=state)
 
     mo_7i.main(years=years, n_rows=n_rows, save_path=save_path)
 
@@ -52,7 +52,7 @@ def test_mo_7i_output(state='test'):
     """Test the output of the mo_7i module."""
 
     # load output
-    save_path = mo_7i.get_path_data(name='vrl', state=state)
+    save_path = mo_7i.get_path_data(name='vrl', subfolder=state)
     path_file = save_path / mo_7i.OUTPUT_FILENAME
 
     # E   UnicodeDecodeError: 'utf-8' codec can't decode byte 0xa6 in position 10: invalid start byte

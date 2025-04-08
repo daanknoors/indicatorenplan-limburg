@@ -1,6 +1,6 @@
 import pytest
 
-from indicatorenplan_limburg.data.load import load_data_vrl
+from indicatorenplan_limburg.processing.load import load_data_vrl
 from indicatorenplan_limburg.configs.paths import PATH_DATA_SETS
 
 

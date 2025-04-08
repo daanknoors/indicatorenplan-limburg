@@ -9,7 +9,7 @@ from pathlib import Path
 from collections.abc import Sequence
 
 from indicatorenplan_limburg.configs.paths import get_path_data
-from indicatorenplan_limburg.data.load import load_data_vrl
+from indicatorenplan_limburg.processing.load import load_data_vrl
 
 # Constants
 RANGES_GROOTTEKLASSE = ('0_9', '10_49', '50_99', '100_249', '250_9999')
@@ -107,13 +107,13 @@ def categorize_company_size(employee_counts: pd.Series, ranges: tuple):
 
 
 def concat_data(list_df: Sequence[pd.DataFrame]) -> pd.DataFrame:
-    """Concatenate the data from different years"""
+    """Concatenate the processing from different years"""
     df = pd.concat(list_df, ignore_index=True)
     return df
 
 
 def transform_data_vrl(df: pd.DataFrame) -> pd.DataFrame:
-    """Transform the data to the desired format
+    """Transform the processing to the desired format
 
     Args:
         df (pd.DataFrame): dataframe to transform
@@ -200,22 +200,22 @@ def get_metadata() -> dict:
 
 
 def save_data(df_data: pd.DataFrame, metadata_dict: dict, save_path=None) -> None:
-    """Save the data to a csv file
+    """Save the processing to a csv file
 
     Args:
         df_data (pd.DataFrame): dataframe to save
         metadata_dict (dict): metadata dictionary
-        save_path (Path, optional): path to save the data. Defaults to None.
+        save_path (Path, optional): path to save the processing. Defaults to None.
     """
     if not save_path:
-        save_path = get_path_data(name='vrl', state='processed')
+        save_path = get_path_data(name='vrl', subfolder='processed')
     path_file = save_path / OUTPUT_FILENAME
 
-    # save data to excel with multiple sheets
+    # save processing to excel with multiple sheets
     with pd.ExcelWriter(path_file, engine='openpyxl') as writer:
         # expand all cells
 
-        df_data.to_excel(writer, sheet_name='data', index=False)
+        df_data.to_excel(writer, sheet_name='processing', index=False)
         for sheet_name, df_meta in metadata_dict.items():
             df_meta.to_excel(writer, sheet_name=sheet_name, index=False)
 
@@ -223,16 +223,16 @@ def save_data(df_data: pd.DataFrame, metadata_dict: dict, save_path=None) -> Non
 
 
 def main(years: Sequence[int] = (2023, 2024), n_rows: int | None = None, save_path: str | Path | None = None) -> None:
-    """Main function to load, transform and save the data
+    """Main function to load, transform and save the processing
     Args:
         years (Sequence[int], optional): years to load. Defaults to (2023, 2024).
         n_rows (int | None, optional): number of rows to load. Mainly for testing. Defaults to None.
-        save_path (str | Path | None, optional): path to save the data. Defaults to None.
+        save_path (str | Path | None, optional): path to save the processing. Defaults to None.
 
     Returns:
         None
     """
-    # Load the data
+    # Load the processing
     list_df = []
     for year in years:
         # load only these columns
@@ -241,16 +241,16 @@ def main(years: Sequence[int] = (2023, 2024), n_rows: int | None = None, save_pa
         df = transform_data_vrl(df)
         list_df.append(df)
 
-    # Merge the data for multiple years
+    # Merge the processing for multiple years
     df_data = concat_data(list_df)
 
-    # sort the data
+    # sort the processing
     df_data = df_data.sort_values(by=['period', 'dim_sbi_1', 'dim_grootte_1'])
 
     # get metadata
     metadata_dict = get_metadata()
 
-    # save the data
+    # save the processing
     save_data(df_data, metadata_dict, save_path=save_path)
 
 
