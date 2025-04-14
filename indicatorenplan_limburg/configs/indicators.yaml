@@ -1,0 +1,4 @@
+computed_metrics: [MO-7i]
+metric settings:
+  MO-7i:
+    years: [2023, 2024]
