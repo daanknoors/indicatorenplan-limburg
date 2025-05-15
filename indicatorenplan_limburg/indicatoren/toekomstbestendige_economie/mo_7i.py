@@ -11,127 +11,68 @@ from collections.abc import Sequence
 from indicatorenplan_limburg.indicatoren.base_indicator import BaseIndicator
 from indicatorenplan_limburg.indicatoren.registry import register_indicator
 from indicatorenplan_limburg.configs.paths import get_path_data
-from indicatorenplan_limburg.processing.load import load_data_vrl
+from indicatorenplan_limburg.processing.load import load_all_data_in_dir
+from indicatorenplan_limburg.metadata import metadata
 
 
 # Constants
 RANGES_GROOTTEKLASSE = ('0_9', '10_49', '50_99', '100_249', '250_9999')
 OUTPUT_FILENAME = "MO_7i Vestigingen per grootteklasse per sector.xlsx"
 
-# Mapping of SBI names to shorter name categories, easier to display
-SBI_DICT = {
-    'Industrie': 'industrie',
-    'Bouwnijverheid': 'bouwnijverheid',
-    'Advisering, onderzoek, special. zakelijke dienstverlening': 'onderzoek',
-    'Openbaar bestuur, overheidsdiensten, sociale verzekeringen': 'overheid',
-    'Logies-, maaltijd- en drankverstrekking': 'logies',
-    'Onderwijs': 'onderwijs',
-    'Gezondheids- en welzijnszorg': 'gezondheid',
-    'Landbouw, bosbouw en visserij': 'landbouw',
-    'Overige dienstverlening': 'overig',
-    'Informatie en communicatie': 'ict',
-    'Cultuur, sport en recreatie': 'csr',
-    'Extraterritoriale organisaties en lichamen': 'extraterritoraal',
-    'Financiële instellingen': 'financien',
-    'Groot- en detailhandel; reparatie van auto’s': 'autoreparatie',
-    'Huishoudens als werkgever': 'huishouden',
-    'Productie, distributie, handel in elektriciteit en aardgas': 'productie',
-    'Verhuur van en handel in onroerend goed': 'onroerend',
-    'Verhuur van roerende goederen, overige zakel. dienstverl.': 'roerend',
-    'Vervoer en opslag': 'vervoer',
-    'Winning van delfstoffen': 'delfstoffen',
-    'Winning/distributie van water; afval(water)beheer,sanering': 'afval'
-}
+
 
 @register_indicator
 class IndicatorMO7i(BaseIndicator):
     """Class for the MO-7i indicator"""
 
 
-    def load_data(self):
-        """Load the data for the indicator"""
-        # Load the data from the VRL
-        df = load_data_vrl(year=self.config['year'], usecols=self.config['usecols'])
-        return df
-
-    def compute(self, data):
+    def compute(self, data: dict[str, pd.DataFrame]) -> pd.DataFrame:
         """Compute the indicator"""
-        df = data.copy()
+        if data is None:
+           self.load_data(usecols=["PEILDATUM", "COROP_NAAM", "SBI_1_NAAM", "WP_FPU_TOTAAL"])
 
-        # Transform the data
-        year = pd.to_datetime(df['PEILDATUM']).dt.year
+        output = []
+        for name, df in data.items():
+            df = df.copy()
 
-        # add grootteklassen and convert to category for easier ordering
-        df['dim_grootte_1'] = categorize_company_size(employee_counts=df['WP_FPU_TOTAAL'], ranges=RANGES_GROOTTEKLASSE)
+            # Transform the data
+            year = pd.to_datetime(df['PEILDATUM']).dt.year
 
-        # transform names SBI
-        df['dim_sbi_1'] = df['SBI_1_NAAM'].replace(SBI_DICT)
+            # add grootteklassen and convert to category for easier ordering
+            df['dim_grootte_1'] = categorize_company_size(employee_counts=df['WP_FPU_TOTAAL'], ranges=RANGES_GROOTTEKLASSE)
 
-        # count group by sbi naam and grootteklassen
-        df_grouped = df.groupby(by=['dim_sbi_1', 'dim_grootte_1'], observed=False).size().reset_index(name='mo-7i')
+            # transform names SBI
+            df['dim_sbi_1'] = df['SBI_1_NAAM'].replace(metadata.SBI_DICT)
 
-        # add remaining columns
-        df_grouped['period'] = year
-        df_grouped['geolevel'] = 'prov_code'
-        df_grouped['geoitem'] = 'pv31'
+            # count group by sbi naam and grootteklassen
+            df_grouped = df.groupby(by=['dim_sbi_1', 'dim_grootte_1'], observed=False).size().reset_index(name='mo-7i')
 
-        # subset and order columns
-        df_grouped = df_grouped[['period', 'geolevel', 'geoitem', 'dim_sbi_1', 'dim_grootte_1', 'mo-7i']]
-        return df_grouped
+            # add remaining columns
+            df_grouped['period'] = year
+            df_grouped['geolevel'] = 'prov_code'
+            df_grouped['geoitem'] = 'pv31'
+
+            # subset and order columns
+            df_grouped = df_grouped[['period', 'geolevel', 'geoitem', 'dim_sbi_1', 'dim_grootte_1', 'mo-7i']]
+
+            # add to output list
+            output.append(df_grouped)
+
+        # Merge the output for multiple years
+        df_output = pd.concat(output, ignore_index=True)
+
+        # sort the output
+        df_output = df_output.sort_values(by=['period', 'dim_sbi_1', 'dim_grootte_1'])
+
+        return df_output
 
     def get_metadata(self) -> dict:
         """Get the metadata for the indicator"""
-
-        def _onderwerpen_metadata():
-            """Get the 'onderwerpen' metadata for the indicator"""
-            df_onderwerpen = pd.DataFrame({
-                'Indicator code': ['mo_7i'],
-                'Name': ['MO_7i Vestigingen per grootteklasse per sector'],
-                'Data type': ['Numeric'],
-                'Keywords': ['Indicatorenplan'],
-                'Period type': ['Year'],
-                'Formula': [np.nan],
-                'Aggregation indicator': [np.nan],
-                'Unit': ['aantal'],
-                'Source': ['ETIL'],
-                'Start period': [2023],
-                'End period': [2024],
-                'RoundOff': [1],
-                'Description': [
-                    'Deze indicator maakt onderdeel uit van het Indicatorenplan Statenperiode 2023-2027 en is bedoeld om de maatschappelijke opgaven, doelstellingen of resultaten uit de beleidskaders te monitoren. Vestigingen per grootteklasse per sector.'],
-                'More information': [np.nan]
-            })
-            return df_onderwerpen
-
-        def _dim_sbi_metadata():
-            """Get the 'sbi_dim' metadata for the indicator"""
-            df_dim_sbi = pd.DataFrame({
-                'itemcode': SBI_DICT.values(),
-                'Name': SBI_DICT.keys()
-            })
-            return df_dim_sbi
-
-        def _dim_grootteklasse_metadata():
-            """Get the 'grootteklasse_dim' metadata for the indicator"""
-            df_grooteklasse = pd.DataFrame({
-                'itemcode': RANGES_GROOTTEKLASSE,
-                'Name': [x.replace('_', '-') for x in RANGES_GROOTTEKLASSE]
-            })
-            return df_grooteklasse
-
-        def _dim_geoitem_metadata():
-            """Get the 'geoitem' metadata for the indicator"""
-            df_dim_geoitem = pd.DataFrame({
-                'itemcode': ['pv31'],
-                'Name': ['Provincie Limburg']
-            })
-            return df_dim_geoitem
-
         metadata_dict = {
-            'onderwerpen': _onderwerpen_metadata(),
-            'dim_sbi': _dim_sbi_metadata(),
-            'dim_grootteklasse': _dim_grootteklasse_metadata(),
-            'dim_geoitem': _dim_geoitem_metadata()
+            'onderwerpen': metadata.metadata_onderwerpen(indicator_code='mo_7i', indicator_name='MO_7i Vestigingen per grootteklasse per sector', start_period=2023, end_period=2024)
+            'dim_sbi': metadata.metadata_dim_sbi(dimension_dict=metadata.SBI_DICT),
+            'dim_grootteklasse': metadata.metadata_dim_grootteklasse(RANGES_GROOTTEKLASSE),
+            'dim_geoitem': metadata.metadata_geo_item()
         }
         return metadata_dict
 
@@ -203,26 +144,6 @@ def categorize_company_size(employee_counts: pd.Series, ranges: tuple):
 
 
 def save_data(df_data: pd.DataFrame, metadata_dict: dict, save_path=None) -> None:
-    """Save the processing to a csv file
-
-    Args:
-        df_data (pd.DataFrame): dataframe to save
-        metadata_dict (dict): metadata dictionary
-        save_path (Path, optional): path to save the processing. Defaults to None.
-    """
-    if not save_path:
-        save_path = get_path_data(name='vrl', subfolder='processed')
-    path_file = save_path / OUTPUT_FILENAME
-
-    # save processing to excel with multiple sheets
-    with pd.ExcelWriter(path_file, engine='openpyxl') as writer:
-        # expand all cells
-
-        df_data.to_excel(writer, sheet_name='processing', index=False)
-        for sheet_name, df_meta in metadata_dict.items():
-            df_meta.to_excel(writer, sheet_name=sheet_name, index=False)
-
-    print(f"Data saved to {path_file}")
 
 
 def main(years: Sequence[int] = (2023, 2024), n_rows: int | None = None, save_path: str | Path | None = None) -> None:

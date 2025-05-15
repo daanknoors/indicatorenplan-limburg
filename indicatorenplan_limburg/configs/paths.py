@@ -1,7 +1,8 @@
 from pathlib import Path
 
-# Data paths
-PATH_DATA_DIR = Path('~/data')
+# Data path
+PATH_REPO_DIR = Path(__file__).resolve().parent.parent
+PATH_DATA_DIR = Path('~/data/Indicatorenplan').expanduser()
 
 
 def get_path_data(name: str, subfolder: str | None = None) -> Path:

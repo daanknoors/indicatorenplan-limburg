@@ -49,7 +49,7 @@ def show_summary_data_in_dir(directory: Path | str, n_rows: int = 5) -> None:
     files = list(directory.glob('*'))
     print(f"Found {len(files)} files in {directory}:")
     for file in files:
-        print(f"- {file.name}")
+        print(f"- {file.code}")
     print(f"{'=' * 40}")
 
     # only process files with .csv, .xlsx, or .xls extensions
@@ -62,7 +62,7 @@ def show_summary_data_in_dir(directory: Path | str, n_rows: int = 5) -> None:
 
     # Read each file and show summary
     for file in supported_files:
-        print(f"Processing file: {file.name}")
+        print(f"Processing file: {file.code}")
         if file.suffix == '.csv':
             df = pd.read_csv(file)
             summarize_dataset(df, n_rows)

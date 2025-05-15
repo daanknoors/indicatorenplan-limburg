@@ -1,4 +1,12 @@
-computed_metrics: [MO-7i]
-metric settings:
-  MO-7i:
-    years: [2023, 2024]
+compute: [MO-7i]
+indicators:
+  MO7i:
+    name: "MO_7i Vestigingen per grootteklasse per sector"
+    grootteklasse: ('0_9', '10_49', '50_99', '100_249', '250_9999')
+    metadata: ["onderwerpen", "dim_sbi", "dim_grootteklasse", "dim_geoitem"]
+
+  D21a:
+    name: "D_21a Aantal MKB bedrijven in Limburg met proces- en productinnovaties"
+general:
+  years: [2023, 2027]
+
