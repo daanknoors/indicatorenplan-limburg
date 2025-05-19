@@ -6,22 +6,19 @@ Aantal MKB bedrijven in Limburg met proces- en productinnovaties
 import pandas as pd
 import numpy as np
 
-from indicatorenplan_limburg.configs.paths import get_path_data
 from indicatorenplan_limburg.indicatoren.base_indicator import BaseIndicator
-from indicatorenplan_limburg.indicatoren.registry import register_indicator
 from indicatorenplan_limburg.metadata import metadata
+
 
 class IndicatorD21a(BaseIndicator):
     """Class for the D_21a indicator"""
 
-    def load_data(self):
-        """Load the data for the indicator"""
-        # Load the data
-        df = pd.read_excel(get_path_data(name='toekomstbestendige_economie', subfolder='raw') / "Vestigingen van nieuw opgerichte bedrijven.xlsx")
-        return df
 
     def compute(self, data):
         """Compute the indicator"""
+        if data is None:
+           data = self.load_data()
+
         df = data.copy()
         print("Data loaded successfully")
 

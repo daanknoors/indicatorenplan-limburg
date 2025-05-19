@@ -1,12 +1,17 @@
-compute: [MO-7i]
-indicators:
-  MO7i:
-    name: "MO_7i Vestigingen per grootteklasse per sector"
-    grootteklasse: ('0_9', '10_49', '50_99', '100_249', '250_9999')
-    metadata: ["onderwerpen", "dim_sbi", "dim_grootteklasse", "dim_geoitem"]
-
-  D21a:
-    name: "D_21a Aantal MKB bedrijven in Limburg met proces- en productinnovaties"
-general:
+paths:
+  repo: '~/projects/indicatorenplan_limburg'
+  data: '~/data/Indicatorenplan-limburg'
+runner:
   years: [2023, 2027]
+  include_categories: ['toekomstbestendige_economie']
+  exclude_indicators: ['d21a']
+indicators:
+  toekomstbestendige_economie:
+    mo7i:
+      name: "MO_7i Vestigingen per grootteklasse per sector"
+      grootteklasse: ('0_9', '10_49', '50_99', '100_249', '250_9999')
+      metadata: ["onderwerpen", "dim_sbi", "dim_grootteklasse", "dim_geoitem"]
+    d21a:
+      name: "D_21a Aantal MKB bedrijven in Limburg met proces- en productinnovaties"
+
 

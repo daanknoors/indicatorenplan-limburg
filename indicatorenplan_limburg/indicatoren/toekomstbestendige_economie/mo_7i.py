@@ -9,9 +9,6 @@ from pathlib import Path
 from collections.abc import Sequence
 
 from indicatorenplan_limburg.indicatoren.base_indicator import BaseIndicator
-from indicatorenplan_limburg.indicatoren.registry import register_indicator
-from indicatorenplan_limburg.configs.paths import get_path_data
-from indicatorenplan_limburg.processing.load import load_all_data_in_dir
 from indicatorenplan_limburg.metadata import metadata
 
 
@@ -20,11 +17,8 @@ RANGES_GROOTTEKLASSE = ('0_9', '10_49', '50_99', '100_249', '250_9999')
 OUTPUT_FILENAME = "MO_7i Vestigingen per grootteklasse per sector.xlsx"
 
 
-
-@register_indicator
 class IndicatorMO7i(BaseIndicator):
     """Class for the MO-7i indicator"""
-
 
     def compute(self, data: dict[str, pd.DataFrame]) -> pd.DataFrame:
         """Compute the indicator"""
@@ -69,7 +63,7 @@ class IndicatorMO7i(BaseIndicator):
     def get_metadata(self) -> dict:
         """Get the metadata for the indicator"""
         metadata_dict = {
-            'onderwerpen': metadata.metadata_onderwerpen(indicator_code='mo_7i', indicator_name='MO_7i Vestigingen per grootteklasse per sector', start_period=2023, end_period=2024)
+            'onderwerpen': metadata.metadata_onderwerpen(indicator_code='mo_7i', indicator_name='MO_7i Vestigingen per grootteklasse per sector', start_period=2023, end_period=2024),
             'dim_sbi': metadata.metadata_dim_sbi(dimension_dict=metadata.SBI_DICT),
             'dim_grootteklasse': metadata.metadata_dim_grootteklasse(RANGES_GROOTTEKLASSE),
             'dim_geoitem': metadata.metadata_geo_item()
@@ -143,8 +137,6 @@ def categorize_company_size(employee_counts: pd.Series, ranges: tuple):
 
 
 
-def save_data(df_data: pd.DataFrame, metadata_dict: dict, save_path=None) -> None:
-
 
 def main(years: Sequence[int] = (2023, 2024), n_rows: int | None = None, save_path: str | Path | None = None) -> None:
     """Main function to load, transform and save the processing
@@ -161,8 +153,8 @@ def main(years: Sequence[int] = (2023, 2024), n_rows: int | None = None, save_pa
     for year in years:
         # load only these columns
         subset_cols = ["PEILDATUM", "COROP_NAAM", "SBI_1_NAAM", "WP_FPU_TOTAAL"]
-        df = load_data_vrl(year=year, usecols=subset_cols, n_rows=n_rows)
-        df = transform_data_vrl(df)
+        # df = load_data_vrl(year=year, usecols=subset_cols, n_rows=n_rows)
+        # df = transform_data_vrl(df)
         list_df.append(df)
 
     # Merge the processing for multiple years
@@ -172,10 +164,10 @@ def main(years: Sequence[int] = (2023, 2024), n_rows: int | None = None, save_pa
     df_data = df_data.sort_values(by=['period', 'dim_sbi_1', 'dim_grootte_1'])
 
     # get metadata
-    metadata_dict = get_metadata()
+    # metadata_dict = get_metadata()
 
     # save the processing
-    save_data(df_data, metadata_dict, save_path=save_path)
+    # save_data(df_data, metadata_dict, save_path=save_path)
 
 
 if __name__ == "__main__":

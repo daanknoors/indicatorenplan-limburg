@@ -1,8 +1,9 @@
 import logging
-
 import pandas as pd
+from pathlib import Path
 
-from indicatorenplan_limburg.configs import paths
+from indicatorenplan_limburg.configs import settings
+from indicatorenplan_limburg.system.registry import IndicatorRegistry
 from indicatorenplan_limburg.processing.load import load_all_data_in_dir
 
 
@@ -17,20 +18,29 @@ def get_logger(name):
         logger.setLevel(logging.INFO)
     return logger
 
-class BaseIndicator:
-    """Base class for all indicators."""
 
+class BaseIndicator(metaclass=IndicatorRegistry):
+    """Base class for all indicators.
+
+    Automatically registers all subclasses in the IndicatorRegistry.
+    """
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        # assign code based on class name and category based on folder name
+        cls.code = cls.__class__.__name__.replace('Indicator', '')
+        cls.category = cls.__module__.split('.')[-2]
 
     def __init__(self, config=None, retain_data=False, plot_results=False):
-
-        self.config = config
         self.retain_data = retain_data
         self.plot_results = plot_results
 
-        self.code  = self.__name__.replace("Indicator", "")
-        self.category = self.__module__.split('.')[-2]
-        self.path_data = paths.PATH_DATA_DIR / self.category / self.code
+        self.config = config or settings.load_yaml_config()
+        self.path_data = Path(self.config['paths']['data']) / self.category / self.code
         self.logger = get_logger(self.code)
+
+
 
     def load_data(self, usecols: list[str] | None = None) -> pd.DataFrame | list | dict:
         return load_all_data_in_dir(path_dir=self.path_data / 'input', file_extensions=['.xlsx', '.csv'], usecols=usecols)
