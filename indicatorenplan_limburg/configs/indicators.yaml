@@ -1,5 +1,4 @@
 paths:
-  repo: '~/projects/indicatorenplan_limburg'
   data: '~/data/Indicatorenplan-limburg'
 runner:
   years: [2023, 2027]

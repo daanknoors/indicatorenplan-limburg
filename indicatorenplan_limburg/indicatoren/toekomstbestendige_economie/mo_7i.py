@@ -11,7 +11,6 @@ from collections.abc import Sequence
 from indicatorenplan_limburg.indicatoren.base_indicator import BaseIndicator
 from indicatorenplan_limburg.metadata import metadata
 
-
 # Constants
 RANGES_GROOTTEKLASSE = ('0_9', '10_49', '50_99', '100_249', '250_9999')
 OUTPUT_FILENAME = "MO_7i Vestigingen per grootteklasse per sector.xlsx"
@@ -20,20 +19,23 @@ OUTPUT_FILENAME = "MO_7i Vestigingen per grootteklasse per sector.xlsx"
 class IndicatorMO7i(BaseIndicator):
     """Class for the MO-7i indicator"""
 
-    def compute(self, data: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    def compute(self, data: dict[str, pd.DataFrame] = None) -> pd.DataFrame:
         """Compute the indicator"""
         if data is None:
-           self.load_data(usecols=["PEILDATUM", "COROP_NAAM", "SBI_1_NAAM", "WP_FPU_TOTAAL"])
+            self.load_data(usecols=["PEILDATUM", "COROP_NAAM", "SBI_1_NAAM", "WP_FPU_TOTAAL"])
 
         output = []
         for name, df in data.items():
+            self.logger.info(f"MO7i - Processing data for {name}")
+
             df = df.copy()
 
             # Transform the data
             year = pd.to_datetime(df['PEILDATUM']).dt.year
 
             # add grootteklassen and convert to category for easier ordering
-            df['dim_grootte_1'] = categorize_company_size(employee_counts=df['WP_FPU_TOTAAL'], ranges=RANGES_GROOTTEKLASSE)
+            df['dim_grootte_1'] = categorize_company_size(employee_counts=df['WP_FPU_TOTAAL'],
+                                                          ranges=RANGES_GROOTTEKLASSE)
 
             # transform names SBI
             df['dim_sbi_1'] = df['SBI_1_NAAM'].replace(metadata.SBI_DICT)
@@ -63,7 +65,9 @@ class IndicatorMO7i(BaseIndicator):
     def get_metadata(self) -> dict:
         """Get the metadata for the indicator"""
         metadata_dict = {
-            'onderwerpen': metadata.metadata_onderwerpen(indicator_code='mo_7i', indicator_name='MO_7i Vestigingen per grootteklasse per sector', start_period=2023, end_period=2024),
+            'onderwerpen': metadata.metadata_onderwerpen(indicator_code='mo_7i',
+                                                         indicator_name='MO_7i Vestigingen per grootteklasse per sector',
+                                                         start_period=2023, end_period=2024),
             'dim_sbi': metadata.metadata_dim_sbi(dimension_dict=metadata.SBI_DICT),
             'dim_grootteklasse': metadata.metadata_dim_grootteklasse(RANGES_GROOTTEKLASSE),
             'dim_geoitem': metadata.metadata_geo_item()
@@ -102,7 +106,7 @@ def categorize_company_size(employee_counts: pd.Series, ranges: tuple):
             _parsed_ranges.append((lb, ub))
         return tuple(_parsed_ranges)
 
-    def _categorize_company_size(employee_count: int, _str_ranges: tuple , _parsed_ranges: tuple) -> str | float:
+    def _categorize_company_size(employee_count: int, _str_ranges: tuple, _parsed_ranges: tuple) -> str | float:
         """
         Categorize one row with company size based on the number of employees (i.e. grootteklassen).
 
@@ -127,48 +131,11 @@ def categorize_company_size(employee_counts: pd.Series, ranges: tuple):
     company_sizes = employee_counts.apply(_categorize_company_size, _str_ranges=ranges, _parsed_ranges=parsed_ranges)
 
     # check if there are any nan categories
-    assert company_sizes.notna().all(), (f"Some company sizes could not be categorized as they fall outside of the defined ranges"
-                                         f": rows {company_sizes[company_sizes.isna()].index.tolist()} with values {employee_counts[company_sizes.isna()].tolist()}")
+    assert company_sizes.notna().all(), (
+        f"Some company sizes could not be categorized as they fall outside of the defined ranges"
+        f": rows {company_sizes[company_sizes.isna()].index.tolist()} with values {employee_counts[company_sizes.isna()].tolist()}")
 
     # convert to categorical for easier ordering
     company_sizes = pd.Categorical(company_sizes, categories=ranges, ordered=True)
     return company_sizes
 
-
-
-
-
-def main(years: Sequence[int] = (2023, 2024), n_rows: int | None = None, save_path: str | Path | None = None) -> None:
-    """Main function to load, transform and save the processing
-    Args:
-        years (Sequence[int], optional): years to load. Defaults to (2023, 2024).
-        n_rows (int | None, optional): number of rows to load. Mainly for testing. Defaults to None.
-        save_path (str | Path | None, optional): path to save the processing. Defaults to None.
-
-    Returns:
-        None
-    """
-    # Load the processing
-    list_df = []
-    for year in years:
-        # load only these columns
-        subset_cols = ["PEILDATUM", "COROP_NAAM", "SBI_1_NAAM", "WP_FPU_TOTAAL"]
-        # df = load_data_vrl(year=year, usecols=subset_cols, n_rows=n_rows)
-        # df = transform_data_vrl(df)
-        list_df.append(df)
-
-    # Merge the processing for multiple years
-    df_data = pd.concat(list_df, ignore_index=True)
-
-    # sort the processing
-    df_data = df_data.sort_values(by=['period', 'dim_sbi_1', 'dim_grootte_1'])
-
-    # get metadata
-    # metadata_dict = get_metadata()
-
-    # save the processing
-    # save_data(df_data, metadata_dict, save_path=save_path)
-
-
-if __name__ == "__main__":
-    main()

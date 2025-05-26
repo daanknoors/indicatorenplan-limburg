@@ -1,5 +1,8 @@
 import importlib
 import pkgutil
+from indicatorenplan_limburg.system.logger import setup_logger
+
+log = setup_logger(name=__name__)
 
 
 class IndicatorRegistry(type):
@@ -28,26 +31,23 @@ class IndicatorRegistry(type):
         return list(cls.INDICATOR_REGISTRY.keys())
 
     @classmethod
-    def discover_indicators(cls, categories=None):
+    def discover_indicators(cls):
         """
         Dynamically imports all modules in the metrics package
         to ensure subclasses are defined and registered.
         """
         # import all modules in subfolders
-        if categories is None:
-            package_name = f"indicatorenplan_limburg.indicatoren"
-            for _, module_name, _ in pkgutil.walk_packages([package_name.replace('.', '/')], package_name + "."):
+        package_name = f"indicatorenplan_limburg.indicatoren"
+
+        for _, module_name, _ in pkgutil.walk_packages([package_name.replace('.', '/')], package_name + "."):
+            try:
+                if module_name.endswith('__init__'):
+                    continue
+
                 importlib.import_module(module_name)
-        else:
-            if isinstance(categories, str):
-                categories = [categories]
-            for category in categories:
-
-                package_name = f"indicatorenplan_limburg.indicatoren.{category}"
-                # check if package name directory exists
-                if not importlib.util.find_spec(package_name):
-                    raise ImportError(f"Category with directory: '{package_name}' not found.")
-
-                for _, module_name, _ in pkgutil.walk_packages([package_name.replace('.', '/')], package_name + "."):
-                    importlib.import_module(module_name)
-
+                log.info(f"Loaded indicator: {module_name}")
+            except Exception as e:
+                log.warning(f"Failed to import {module_name}: {e.__class__.__name__} - {e}")
+                cls._fail_load = {
+                    module_name: str(e)
+                }

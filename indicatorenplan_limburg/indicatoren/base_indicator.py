@@ -5,18 +5,7 @@ from pathlib import Path
 from indicatorenplan_limburg.configs import settings
 from indicatorenplan_limburg.system.registry import IndicatorRegistry
 from indicatorenplan_limburg.processing.load import load_all_data_in_dir
-
-
-def get_logger(name):
-    """Get a logger with the specified name."""
-    logger = logging.getLogger(name)
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-    return logger
+from indicatorenplan_limburg.system.logger import setup_logger
 
 
 class BaseIndicator(metaclass=IndicatorRegistry):
@@ -28,22 +17,47 @@ class BaseIndicator(metaclass=IndicatorRegistry):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
-        # assign code based on class name and category based on folder name
-        cls.code = cls.__class__.__name__.replace('Indicator', '')
-        cls.category = cls.__module__.split('.')[-2]
+        # assign code and category based on the module path
+        module_path = cls.__module__.split('.')
+        cls.code = module_path[-1].replace('_', '')
+        cls.category = module_path[-2]
 
-    def __init__(self, config=None, retain_data=False, plot_results=False):
-        self.retain_data = retain_data
+    def __init__(self, path_data=None, retain_input=False, retain_output=False, plot_results=False, config: dict | None = None):
+        self.retain_input = retain_input
+        self.retain_output = retain_output
         self.plot_results = plot_results
+        self.path_data = Path(path_data) if isinstance(path_data, str) else path_data
 
-        self.config = config or settings.load_yaml_config()
-        self.path_data = Path(self.config['paths']['data']) / self.category / self.code
-        self.logger = get_logger(self.code)
+        self.config = self._load_config(config=config)
 
+        self.logger = setup_logger(name=self.__class__.__name__)
+        self.logger.info(f"Initializing {self.__class__.__name__} with config: {self.config}")
 
+        # computed data attributes
+        self.input_data_ = None  # to retain input data if needed
+        self.output_data_ = None  # to retain output data if needed
+
+    def _load_config(self, config: dict | None = None):
+        """Load the configuration for the indicator."""
+        if config is None:
+            config = settings.load_yaml_config()
+            # if path_data is not set, use the default path from config settings
+            if self.path_data is None:
+                self.path_data = Path(settings.load_yaml_config()['paths']['data'])
+
+            # focus config on the specific category and code
+            config = config['indicators'][self.category][self.code]
+
+        # check if config has name and metadata
+        if 'name' not in config or 'metadata' not in config:
+            raise ValueError(f"Config for {self.__class__.__name__} must contain 'name' and 'metadata' fields.")
+        return config
 
     def load_data(self, usecols: list[str] | None = None) -> pd.DataFrame | list | dict:
-        return load_all_data_in_dir(path_dir=self.path_data / 'input', file_extensions=['.xlsx', '.csv'], usecols=usecols)
+        path_input = self.path_data / 'input'
+        self.logger.info(f"Loading data from {path_input}")
+        data = load_all_data_in_dir(path_dir=path_input, file_extensions=['.xlsx', '.csv'], usecols=usecols)
+        return data
 
     def compute(self, data: pd.DataFrame | list | dict):
         raise NotImplementedError
@@ -71,20 +85,26 @@ class BaseIndicator(metaclass=IndicatorRegistry):
             for sheet_name, df_meta in metadata_dict.items():
                 df_meta.to_excel(writer, sheet_name=sheet_name, index=False)
 
-        print(f"Data saved to {path_file}")
+        self.logger.info(f"Saved results to {path_file}")
 
     def plot(self):
         """Optional: plot results if implemented and plot_results is True."""
-        # warn if not implemented
-        self.logger.warning("Plotting not implemented for this metric.")
+        self.logger.info("Plotting not implemented for this metric.")
 
     def run(self):
         try:
             data = self.load_data()
+            if self.retain_input:
+                self.logger.info(f"Retaining input data for {self.__class__.__name__}")
+                self.input_data_ = data
             output = self.compute(data=data)
+            if self.retain_output:
+                self.logger.info(f"Retaining output data for {self.__class__.__name__}")
+                self.output_data_ = output
             md = self.get_metadata()
-            self.save_results(output)
+            self.save_results(output, metadata_dict=md)
+            self.logger.info(f"Finished processing {self.__class__.__name__} - output saved to {self.path_data / 'output'}")
             if self.plot_results:
                 self.plot()
         except Exception as e:
-            self.logger.error(f"{self.__class__.__name__} failed: {e}")
+            self.logger.error(f"{self.__class__.__name__} failed: {e}", exc_info=True)

@@ -2,6 +2,7 @@
 from pathlib import Path
 import yaml
 
+PATH_REPO = Path(__file__).resolve().parent.parent.parent
 
 def load_yaml_config(file_path: Path | None = None) -> dict:
     """Load a YAML config file."""
