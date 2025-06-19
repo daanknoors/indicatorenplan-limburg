@@ -65,8 +65,8 @@ class IndicatorMO7i(BaseIndicator):
     def get_metadata(self) -> dict:
         """Get the metadata for the indicator"""
         metadata_dict = {
-            'onderwerpen': metadata.metadata_onderwerpen(indicator_code='mo_7i',
-                                                         indicator_name='MO_7i Vestigingen per grootteklasse per sector',
+            'onderwerpen': metadata.metadata_onderwerpen(indicator_code=self.code,
+                                                         indicator_name=self.config['name'],
                                                          start_period=2023, end_period=2024),
             'dim_sbi': metadata.metadata_dim_sbi(dimension_dict=metadata.SBI_DICT),
             'dim_grootteklasse': metadata.metadata_dim_grootteklasse(RANGES_GROOTTEKLASSE),

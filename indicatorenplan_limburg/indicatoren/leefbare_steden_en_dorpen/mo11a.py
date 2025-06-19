@@ -1,10 +1,8 @@
-"""Indicator: Woningtekort Data"""
-
+"""Indicatorenplan Limburg - MO_11A: Woningtekort in Limburg en Nederland"""
 import pandas as pd
 
-from indicatorenplan_limburg.configs.paths import get_path_data
+from indicatorenplan_limburg.indicatoren.base_indicator import BaseIndicator
 
-PATH_DATA_WONINGTEKORT = get_path_data(name='Woningtekort', subfolder=None)
 # Voorbeeld regio_mapping
 REGIO_MAPPING = {
 
@@ -13,6 +11,24 @@ REGIO_MAPPING = {
     'Zuid-Limburg': 'NL_LIM_ZL',
     'Nederland': 'NL'
 }
+
+class IndicatorMO11A(BaseIndicator):
+    """Class for the MO_11A indicator - Woningtekort in Limburg en Nederland"""
+
+    def compute(self, data=None):
+        """Compute the indicator"""
+        if data is None:
+            data = self.load_data()
+
+        df = data.copy()
+
+        # Select relevant columns
+        df = df[['period', 'geoitem', 'df_mo_11a']]
+
+        # Rename columns
+        df.rename(columns={'df_mo_11a': 'woningtekort'}, inplace=True)
+
+        return df
 
 def load_data_woningtekort_2024():
     df_2024 = pd.read_excel(PATH_DATA_WONINGTEKORT / 'Woningtekort - 2024 - COROP-gebieden.xlsx', skiprows=1)

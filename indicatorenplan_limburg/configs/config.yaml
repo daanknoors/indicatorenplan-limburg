@@ -3,7 +3,10 @@ paths:
 runner:
   years: [2023, 2027]
   include_categories: ['toekomstbestendige_economie']
-  exclude_indicators: ['d21a']
+  exclude_indicators: ['mo7i']
+  retain_input: True
+  retain_output: True
+  log_level: 'DEBUG'
 indicators:
   toekomstbestendige_economie:
     mo7i:
@@ -12,5 +15,12 @@ indicators:
       metadata: ["onderwerpen", "dim_sbi", "dim_grootteklasse", "dim_geoitem"]
     d21a:
       name: "D_21a Aantal MKB bedrijven in Limburg met proces- en productinnovaties"
+      metadata: ["onderwerpen"]
+    d21b:
+        name: "D_21b Aantal MKB bedrijven in innovatieve samenwerkingsverbanden"
+        metadata: ["onderwerpen"]
+    d23a:
+      name: "D_23a Aantal startende innovatieve bedrijven"
+      metadata: ["onderwerpen"]
 
 

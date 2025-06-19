@@ -6,7 +6,7 @@ from datetime import datetime
 from indicatorenplan_limburg.configs.settings import PATH_REPO
 
 
-def setup_logger(name="indicatorenplan-limburg", log_dir=None, level=None):
+def setup_logger(name="indicatorenplan-limburg", log_dir=None, level='INFO'):
     log = logging.getLogger(name)
 
     # Check if the logger already has handlers, only configure once

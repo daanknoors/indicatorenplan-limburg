@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from indicatorenplan_limburg.indicatoren.toekomstbestendige_economie import mo_7i
+from indicatorenplan_limburg.indicatoren.toekomstbestendige_economie import mo7i
 from indicatorenplan_limburg.configs import paths
 
 

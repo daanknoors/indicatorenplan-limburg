@@ -8,7 +8,7 @@ def load_yaml_config(file_path: Path | None = None) -> dict:
     """Load a YAML config file."""
     # Define the path to the config file
     if file_path is None:
-        file_path = Path(__file__).resolve().parent.parent / 'configs' / 'indicators.yaml'
+        file_path = Path(__file__).resolve().parent.parent / 'configs' / 'config.yaml'
 
     # load config
     with open(file_path, 'r', encoding='utf-8') as file:

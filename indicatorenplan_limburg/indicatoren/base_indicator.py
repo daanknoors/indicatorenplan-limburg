@@ -1,5 +1,6 @@
 import logging
 import pandas as pd
+import inspect
 from pathlib import Path
 
 from indicatorenplan_limburg.configs import settings
@@ -18,15 +19,15 @@ class BaseIndicator(metaclass=IndicatorRegistry):
         super().__init_subclass__(**kwargs)
 
         # assign code and category based on the module path
-        module_path = cls.__module__.split('.')
-        cls.code = module_path[-1].replace('_', '')
-        cls.category = module_path[-2]
+        file_path = Path(inspect.getfile(cls)).resolve()
+        cls.code = file_path.stem.replace('_', '')
+        cls.category = file_path.parent.name
 
     def __init__(self, path_data=None, retain_input=False, retain_output=False, plot_results=False, config: dict | None = None):
         self.retain_input = retain_input
         self.retain_output = retain_output
         self.plot_results = plot_results
-        self.path_data = Path(path_data) if isinstance(path_data, str) else path_data
+        self.path_data = Path(path_data).expanduser() if isinstance(path_data, str) else path_data
 
         self.config = self._load_config(config=config)
 
@@ -43,7 +44,7 @@ class BaseIndicator(metaclass=IndicatorRegistry):
             config = settings.load_yaml_config()
             # if path_data is not set, use the default path from config settings
             if self.path_data is None:
-                self.path_data = Path(settings.load_yaml_config()['paths']['data'])
+                self.path_data = Path(settings.load_yaml_config()['paths']['data']).expanduser() / self.category / self.code
 
             # focus config on the specific category and code
             config = config['indicators'][self.category][self.code]
@@ -53,10 +54,10 @@ class BaseIndicator(metaclass=IndicatorRegistry):
             raise ValueError(f"Config for {self.__class__.__name__} must contain 'name' and 'metadata' fields.")
         return config
 
-    def load_data(self, usecols: list[str] | None = None) -> pd.DataFrame | list | dict:
+    def load_data(self, usecols: list[str] | None = None, sheet_name: str | int | None = 0, **kwargs) -> pd.DataFrame | dict:
         path_input = self.path_data / 'input'
         self.logger.info(f"Loading data from {path_input}")
-        data = load_all_data_in_dir(path_dir=path_input, file_extensions=['.xlsx', '.csv'], usecols=usecols)
+        data = load_all_data_in_dir(path_dir=path_input, file_extensions=['.xlsx', '.csv'], sheet_name=sheet_name, usecols=usecols, **kwargs)
         return data
 
     def compute(self, data: pd.DataFrame | list | dict):
@@ -75,19 +76,23 @@ class BaseIndicator(metaclass=IndicatorRegistry):
         """
         if save_path is None:
             save_path = self.path_data / 'output'
-        path_file = save_path / f"{self.config['name']}.xlsx"
+
+        if isinstance(save_path, str):
+            save_path = Path(save_path)
+
+        # create missing directories and ensure the path exists
+        path_file = (save_path / f"{self.config['name']}.xlsx").expanduser()
+        path_file.parent.mkdir(parents=True, exist_ok=True)
 
         # save processing to excel with multiple sheets
         with pd.ExcelWriter(path_file, engine='openpyxl') as writer:
-            # expand all cells
-
             df_output.to_excel(writer, sheet_name='data', index=False)
             for sheet_name, df_meta in metadata_dict.items():
                 df_meta.to_excel(writer, sheet_name=sheet_name, index=False)
 
         self.logger.info(f"Saved results to {path_file}")
 
-    def plot(self):
+    def plot(self, output):
         """Optional: plot results if implemented and plot_results is True."""
         self.logger.info("Plotting not implemented for this metric.")
 
@@ -95,16 +100,14 @@ class BaseIndicator(metaclass=IndicatorRegistry):
         try:
             data = self.load_data()
             if self.retain_input:
-                self.logger.info(f"Retaining input data for {self.__class__.__name__}")
                 self.input_data_ = data
             output = self.compute(data=data)
             if self.retain_output:
-                self.logger.info(f"Retaining output data for {self.__class__.__name__}")
                 self.output_data_ = output
             md = self.get_metadata()
             self.save_results(output, metadata_dict=md)
             self.logger.info(f"Finished processing {self.__class__.__name__} - output saved to {self.path_data / 'output'}")
             if self.plot_results:
-                self.plot()
+                self.plot(output)
         except Exception as e:
             self.logger.error(f"{self.__class__.__name__} failed: {e}", exc_info=True)
