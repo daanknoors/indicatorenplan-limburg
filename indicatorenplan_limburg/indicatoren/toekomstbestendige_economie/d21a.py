@@ -12,7 +12,6 @@ from indicatorenplan_limburg.configs.style import COLOR_PALETTE_LIST
 
 
 class IndicatorD21a(BaseIndicator):
-
     """Class for the D_21a indicator"""
 
     def compute(self, data=None):

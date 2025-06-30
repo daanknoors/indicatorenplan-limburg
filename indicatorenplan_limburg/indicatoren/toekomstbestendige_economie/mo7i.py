@@ -22,7 +22,7 @@ class IndicatorMO7i(BaseIndicator):
     def compute(self, data: dict[str, pd.DataFrame] = None) -> pd.DataFrame:
         """Compute the indicator"""
         if data is None:
-            self.load_data(usecols=["PEILDATUM", "COROP_NAAM", "SBI_1_NAAM", "WP_FPU_TOTAAL"])
+            data = self.load_data(usecols=["PEILDATUM", "COROP_NAAM", "SBI_1_NAAM", "WP_FPU_TOTAAL"])
 
         output = []
         for name, df in data.items():
@@ -30,12 +30,12 @@ class IndicatorMO7i(BaseIndicator):
 
             df = df.copy()
 
-            # Transform the data
-            year = pd.to_datetime(df['PEILDATUM']).dt.year
+            # extract year from PEILDATUM
+            year = pd.to_datetime(df['PEILDATUM']).dt.year[0]
 
             # add grootteklassen and convert to category for easier ordering
             df['dim_grootte_1'] = categorize_company_size(employee_counts=df['WP_FPU_TOTAAL'],
-                                                          ranges=RANGES_GROOTTEKLASSE)
+                                                          ranges=self.config['grootteklasse'])
 
             # transform names SBI
             df['dim_sbi_1'] = df['SBI_1_NAAM'].replace(metadata.SBI_DICT)
@@ -44,20 +44,26 @@ class IndicatorMO7i(BaseIndicator):
             df_grouped = df.groupby(by=['dim_sbi_1', 'dim_grootte_1'], observed=False).size().reset_index(name='mo-7i')
 
             # add remaining columns
-            df_grouped['period'] = year
+            df_grouped['period'] = f"h1y{year}"
             df_grouped['geolevel'] = 'prov_code'
             df_grouped['geoitem'] = 'pv31'
 
             # subset and order columns
             df_grouped = df_grouped[['period', 'geolevel', 'geoitem', 'dim_sbi_1', 'dim_grootte_1', 'mo-7i']]
 
+            # duplicate data for two periods in year (voorjaar / najaar) and rename period accordingly
+            df_grouped_2 = df_grouped.copy()
+            df_grouped_2['period'] = df_grouped_2['period'].str.replace('h1y', 'h2y')
+            df_out = pd.concat([df_grouped, df_grouped_2], ignore_index=True)
+
             # add to output list
-            output.append(df_grouped)
+            output.append(df_out)
 
         # Merge the output for multiple years
         df_output = pd.concat(output, ignore_index=True)
 
-        # sort the output
+        # sort the output - period is categorical and sorted based on input order
+        df_output['period'] = pd.Categorical(df_output['period'], categories=df_output['period'].unique(), ordered=True)
         df_output = df_output.sort_values(by=['period', 'dim_sbi_1', 'dim_grootte_1'])
 
         return df_output
@@ -139,3 +145,7 @@ def categorize_company_size(employee_counts: pd.Series, ranges: tuple):
     company_sizes = pd.Categorical(company_sizes, categories=ranges, ordered=True)
     return company_sizes
 
+
+if __name__ == "__main__":
+    indicator = IndicatorMO7i()
+    indicator.run()

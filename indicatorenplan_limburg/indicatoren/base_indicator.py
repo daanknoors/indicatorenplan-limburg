@@ -54,13 +54,19 @@ class BaseIndicator(metaclass=IndicatorRegistry):
             raise ValueError(f"Config for {self.__class__.__name__} must contain 'name' and 'metadata' fields.")
         return config
 
-    def load_data(self, usecols: list[str] | None = None, sheet_name: str | int | None = 0, **kwargs) -> pd.DataFrame | dict:
+    def load_data(self, **kwargs) -> pd.DataFrame | dict:
         path_input = self.path_data / 'input'
         self.logger.info(f"Loading data from {path_input}")
-        data = load_all_data_in_dir(path_dir=path_input, file_extensions=['.xlsx', '.csv'], sheet_name=sheet_name, usecols=usecols, **kwargs)
+
+        # load all data in the input directory with specified file extensions
+        data = load_all_data_in_dir(path_dir=path_input, file_extensions=['.xlsx', '.csv'], **kwargs)
+
+        # save input data if retain_input is True
+        if self.retain_input:
+            self.input_data_ = data
         return data
 
-    def compute(self, data: pd.DataFrame | list | dict):
+    def compute(self, data: pd.DataFrame | list | dict | None = None) -> pd.DataFrame:
         raise NotImplementedError
 
     def get_metadata(self):
@@ -98,10 +104,7 @@ class BaseIndicator(metaclass=IndicatorRegistry):
 
     def run(self):
         try:
-            data = self.load_data()
-            if self.retain_input:
-                self.input_data_ = data
-            output = self.compute(data=data)
+            output = self.compute()
             if self.retain_output:
                 self.output_data_ = output
             md = self.get_metadata()

@@ -18,17 +18,17 @@ class IndicatorMO11A(BaseIndicator):
     def compute(self, data=None):
         """Compute the indicator"""
         if data is None:
-            data = self.load_data()
+            data = self.load_data(skiprows=1)
 
         df = data.copy()
+        # Select relevant columns and rows
+        df = df.iloc[:3, ['Regio', 'aantal']]
+        df['period'] = '2024'
+        
 
-        # Select relevant columns
-        df = df[['period', 'geoitem', 'df_mo_11a']]
-
-        # Rename columns
-        df.rename(columns={'df_mo_11a': 'woningtekort'}, inplace=True)
 
         return df
+
 
 def load_data_woningtekort_2024():
     df_2024 = pd.read_excel(PATH_DATA_WONINGTEKORT / 'Woningtekort - 2024 - COROP-gebieden.xlsx', skiprows=1)
