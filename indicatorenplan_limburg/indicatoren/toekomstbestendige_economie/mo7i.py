@@ -4,16 +4,9 @@ Vestigingen per grootteklasse per sector
 """
 import numpy as np
 import pandas as pd
-from pathlib import Path
-
-from collections.abc import Sequence
 
 from indicatorenplan_limburg.indicatoren.base_indicator import BaseIndicator
 from indicatorenplan_limburg.metadata import metadata
-
-# Constants
-RANGES_GROOTTEKLASSE = ('0_9', '10_49', '50_99', '100_249', '250_9999')
-OUTPUT_FILENAME = "MO_7i Vestigingen per grootteklasse per sector.xlsx"
 
 
 class IndicatorMO7i(BaseIndicator):
@@ -75,7 +68,7 @@ class IndicatorMO7i(BaseIndicator):
                                                          indicator_name=self.config['name'],
                                                          start_period=2023, end_period=2024),
             'dim_sbi': metadata.metadata_dim_sbi(dimension_dict=metadata.SBI_DICT),
-            'dim_grootteklasse': metadata.metadata_dim_grootteklasse(RANGES_GROOTTEKLASSE),
+            'dim_grootteklasse': metadata.metadata_dim_grootteklasse(ranges_grootteklasse=self.config['grootteklasse']),
             'dim_geoitem': metadata.metadata_geo_item()
         }
         return metadata_dict
